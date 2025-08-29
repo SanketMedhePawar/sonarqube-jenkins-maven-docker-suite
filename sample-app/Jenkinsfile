@@ -1,34 +1,43 @@
 pipeline {
-  agent { docker { image 'maven:3.9-eclipse-temurin-17' args '-v /var/maven/repo:/root/.m2/repository' } }
-
-  environment {
-    SONAR_HOST_URL = credentials('sonar-host-url')    // e.g., http://sonarqube:9000 (string credential)
-    SONAR_TOKEN    = credentials('sonar-token')       // Secret text credential with the token
-  }
-
-  stages {
-    stage('Checkout') {
-      steps { checkout scm }
-    }
-
-    stage('Build & Test') {
-      steps { sh 'mvn -B -q -DskipTests=false clean verify' }
-      post {
-        always {
-          junit '**/target/surefire-reports/*.xml'
+    agent {
+        docker {
+            image 'maven:3.9-eclipse-temurin-17'   // ✅ FIXED: Proper declarative docker syntax
+            args '-v /var/maven/repo:/root/.m2/repository'  // ✅ FIXED: args moved inside docker block
         }
-      }
     }
 
-    stage('SonarQube Analysis') {
-      steps {
-        sh """
-          mvn -B -q sonar:sonar \
-            -Dsonar.projectKey=hello-sonar-jenkins \
-            -Dsonar.host.url=${SONAR_HOST_URL} \
-            -Dsonar.login=${SONAR_TOKEN}
-        """
-      }
+    environment {
+        SONAR_HOST_URL = credentials('sonar-host-url')  // ✅ SAME: uses Jenkins string credential
+        SONAR_TOKEN    = credentials('sonar-token')     // ✅ SAME: uses Jenkins secret text credential
     }
-  }
+
+    stages {
+        stage('Checkout') {
+            steps {
+                checkout scm   // ✅ SAME: clean checkout from Git SCM
+            }
+        }
+
+        stage('Build & Test') {
+            steps {
+                sh 'mvn -B -DskipTests=false clean verify'   // ✅ FIXED: removed `-q` (quiet) to see logs
+            }
+            post {
+                always {
+                    junit '**/target/surefire-reports/*.xml'   // ✅ SAME: publishes test results
+                }
+            }
+        }
+
+        stage('SonarQube Analysis') {
+            steps {
+                sh """
+                    mvn -B sonar:sonar \         // ✅ FIXED: properly formatted multiline shell block
+                      -Dsonar.projectKey=hello-sonar-jenkins \
+                      -Dsonar.host.url=${SONAR_HOST_URL} \
+                      -Dsonar.login=${SONAR_TOKEN}
+                """
+            }
+        }
+    }
 }
