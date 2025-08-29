@@ -41,7 +41,6 @@ services:
       SONAR_JDBC_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-sonarqube}
       SONAR_JDBC_USERNAME: ${POSTGRES_USER:-sonar}
       SONAR_JDBC_PASSWORD: ${POSTGRES_PASSWORD:-sonarpass}
-      # Tune if you have >2GB RAM free for SonarQube
       SONAR_ES_BOOTSTRAP_CHECKS_DISABLE: "true"
     ports:
       - "9000:9000"
@@ -65,14 +64,15 @@ services:
       - "50000:50000"
     volumes:
       - jenkins_home:/var/jenkins_home
-      - /var/run/docker.sock:/var/run/docker.sock
+      - /var/run/docker.sock:/var/run/docker.sock     # 👈 Gives Jenkins access to host Docker engine
+      - /usr/bin/docker:/usr/bin/docker               # 👈 Mounts Docker CLI binary
       - maven_repo:/var/maven/repo
     networks:
       - devops-net
     depends_on:
       - sonarqube
 
-  # Optional helper container to run Maven locally if you want (outside Jenkins)
+  # Optional helper container to run Maven manually if needed
   maven:
     image: maven:3.9-eclipse-temurin-17
     container_name: maven-cli
@@ -84,3 +84,4 @@ services:
       - maven_repo:/root/.m2/repository
     networks:
       - devops-net
+
